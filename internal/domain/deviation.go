@@ -53,8 +53,9 @@ func EvaluateFindings(p AssayProtocol, observations []DailyObservation, requireC
 		}
 	}
 	for key, observation := range current {
-		if observation.Total() != p.SeedsPerReplicate {
-			findings = append(findings, RuleFinding{RuleCode: "CONSERVATION_" + key, Severity: "critical", TargetDays: []int{observation.DayNo}, TargetReplicates: []int{observation.ReplicateNo}, Result: fmt.Sprintf("分类合计 %d，要求 %d", observation.Total(), p.SeedsPerReplicate)})
+		total, overflowed := observation.safeTotal(p.SeedsPerReplicate)
+		if overflowed || total != p.SeedsPerReplicate {
+			findings = append(findings, RuleFinding{RuleCode: "CONSERVATION_" + key, Severity: "critical", TargetDays: []int{observation.DayNo}, TargetReplicates: []int{observation.ReplicateNo}, Result: fmt.Sprintf("分类合计 %d，要求 %d", total, p.SeedsPerReplicate)})
 		}
 	}
 	metrics := CalculateMetrics(p, observations)

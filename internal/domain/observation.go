@@ -21,8 +21,34 @@ type DailyObservation struct {
 	SupersedesID      string    `json:"supersedes_id,omitempty"`
 }
 
+// safeTotal returns the sum of the five classification counts together with
+// whether the addition overflowed or otherwise exceeded the per-replicate seed
+// budget. Plain int addition silently wraps for huge non-negative values, so
+// callers must use this instead of naively adding the fields.
+func (o DailyObservation) safeTotal(budget int) (int, bool) {
+	values := []int{o.NormalCount, o.AbnormalCount, o.HardSeedCount, o.RottenCount, o.UngerminatedCount}
+	total := 0
+	for _, value := range values {
+		// No individual category may exceed the whole replicate budget, and the
+		// running sum must never leave the non-negative, budget-bounded range.
+		if value < 0 || value > budget {
+			return total, true
+		}
+		next := total + value
+		if next < total || next > budget {
+			return next, true
+		}
+		total = next
+	}
+	return total, false
+}
+
+// Total reports the sum of the five classification counts. It is preserved for
+// read-only inspection of already validated observations; new validation must
+// use safeTotal to avoid integer wraparound.
 func (o DailyObservation) Total() int {
-	return o.NormalCount + o.AbnormalCount + o.HardSeedCount + o.RottenCount + o.UngerminatedCount
+	total, _ := o.safeTotal(int(^uint(0) >> 1))
+	return total
 }
 
 func (o DailyObservation) Validate(p AssayProtocol) error {
@@ -35,8 +61,9 @@ func (o DailyObservation) Validate(p AssayProtocol) error {
 	if o.NormalCount < 0 || o.AbnormalCount < 0 || o.HardSeedCount < 0 || o.RottenCount < 0 || o.UngerminatedCount < 0 {
 		return invalid("counts", "分类计数不能为负数")
 	}
-	if o.Total() != p.SeedsPerReplicate {
-		return invalid("counts", fmt.Sprintf("分类计数之和必须等于每组粒数 %d，当前为 %d", p.SeedsPerReplicate, o.Total()))
+	total, overflowed := o.safeTotal(p.SeedsPerReplicate)
+	if overflowed || total != p.SeedsPerReplicate {
+		return invalid("counts", fmt.Sprintf("分类计数之和必须等于每组粒数 %d，当前为 %d", p.SeedsPerReplicate, total))
 	}
 	if o.RecordedBy == "" {
 		return invalid("recorded_by", "必须填写记录人员")
