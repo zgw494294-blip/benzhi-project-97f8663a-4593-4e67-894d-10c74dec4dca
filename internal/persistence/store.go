@@ -92,13 +92,15 @@ func (s *Store) Update(ctx context.Context, id string, expected int64, action, a
 		return nil, err
 	}
 	defer tx.Rollback()
-	assay, cached := s.assays[id]
-	if !cached {
+	cached, ok := s.assays[id]
+	var assay *domain.GerminationAssay
+	if ok {
+		assay = cached.Clone()
+	} else {
 		assay, err = loadAssay(ctx, tx, id)
 		if err != nil {
 			return nil, err
 		}
-		s.assays[id] = assay
 	}
 	if assay.Revision != expected {
 		return nil, domain.ConflictError{Expected: expected, Current: assay.Revision}
@@ -122,5 +124,6 @@ func (s *Store) Update(ctx context.Context, id string, expected int64, action, a
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	s.assays[id] = assay
 	return assay, nil
 }

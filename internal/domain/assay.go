@@ -123,6 +123,89 @@ func (a *GerminationAssay) Transition(next AssayState, now time.Time) error {
 	return nil
 }
 
+// Clone 返回批次的深拷贝，保证调用方修改副本不会影响缓存中的原对象。
+// 持久层在事务中改动副本前先克隆缓存副本，失败时缓存仍保持回滚后的原始状态，
+// 避免事务回滚后的脏数据污染后续修订（例如唯一约束冲突后 revision 已被抬高）。
+func (a *GerminationAssay) Clone() *GerminationAssay {
+	if a == nil {
+		return nil
+	}
+	clone := *a
+	if a.Protocol.FrozenAt != nil {
+		frozen := *a.Protocol.FrozenAt
+		clone.Protocol.FrozenAt = &frozen
+	}
+	clone.Observations = append([]DailyObservation(nil), a.Observations...)
+	clone.Deviations = make([]DeviationCase, len(a.Deviations))
+	for i := range a.Deviations {
+		clone.Deviations[i] = a.Deviations[i].clone()
+	}
+	clone.Reviews = make([]ReviewRecord, len(a.Reviews))
+	for i := range a.Reviews {
+		clone.Reviews[i] = a.Reviews[i].clone()
+	}
+	clone.ReviewChecklist = append([]ReviewChecklistItem(nil), a.ReviewChecklist...)
+	clone.AuditTrail = make([]AuditEvent, len(a.AuditTrail))
+	for i := range a.AuditTrail {
+		event := a.AuditTrail[i]
+		event.Details = copyAnyMap(event.Details)
+		clone.AuditTrail[i] = event
+	}
+	if a.Report != nil {
+		report := *a.Report
+		report.MetricSnapshot.ByDay = append([]DayMetric(nil), report.MetricSnapshot.ByDay...)
+		clone.Report = &report
+	}
+	return &clone
+}
+
+func (d DeviationCase) clone() DeviationCase {
+	c := d
+	c.TargetDays = append([]int(nil), d.TargetDays...)
+	c.TargetReplicates = append([]int(nil), d.TargetReplicates...)
+	c.RetestObservationIDs = append([]string(nil), d.RetestObservationIDs...)
+	if d.ClosedAt != nil {
+		closed := *d.ClosedAt
+		c.ClosedAt = &closed
+	}
+	return c
+}
+
+func (r ReviewRecord) clone() ReviewRecord {
+	c := r
+	c.Checklist = append([]ReviewChecklistItem(nil), r.Checklist...)
+	c.CorrectionScope = append([]CorrectionTarget(nil), r.CorrectionScope...)
+	c.BaselineObservationIDs = append([]string(nil), r.BaselineObservationIDs...)
+	c.BaselineDeviationStatus = copyStringMap(r.BaselineDeviationStatus)
+	c.BaselineMetrics.ByDay = append([]DayMetric(nil), r.BaselineMetrics.ByDay...)
+	c.Difference.NewObservationIDs = append([]string(nil), r.Difference.NewObservationIDs...)
+	c.Difference.DeviationChanges = append([]string(nil), r.Difference.DeviationChanges...)
+	c.Difference.MetricChanges = append([]MetricChange(nil), r.Difference.MetricChanges...)
+	return c
+}
+
+func copyStringMap(m map[string]string) map[string]string {
+	if m == nil {
+		return nil
+	}
+	c := make(map[string]string, len(m))
+	for k, v := range m {
+		c[k] = v
+	}
+	return c
+}
+
+func copyAnyMap(m map[string]any) map[string]any {
+	if m == nil {
+		return nil
+	}
+	c := make(map[string]any, len(m))
+	for k, v := range m {
+		c[k] = v
+	}
+	return c
+}
+
 func (a *GerminationAssay) Freeze(now time.Time) error {
 	if a.State != StateDraft {
 		return invalid("state", "只有草稿批次可冻结方案")
