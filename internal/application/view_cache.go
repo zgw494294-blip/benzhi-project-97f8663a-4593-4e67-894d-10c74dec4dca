@@ -29,6 +29,10 @@ func (c *assayViewCache) Get(id string) (*AssayView, bool) {
 	return &view, true
 }
 
+// Put stores the view unless a newer revision is already cached. Writes commit
+// under the repository's serialized update lock and therefore always carry the
+// latest revision, so they never lose to a stale concurrent reader. A read that
+// observed an older revision must not clobber a newer cached entry.
 func (c *assayViewCache) Put(view *AssayView) {
 	if view == nil || view.Assay == nil {
 		return
@@ -38,8 +42,14 @@ func (c *assayViewCache) Put(view *AssayView) {
 		return
 	}
 	c.mu.Lock()
+	defer c.mu.Unlock()
+	if existing, ok := c.entries[view.Assay.ID]; ok {
+		var cached AssayView
+		if err := json.Unmarshal(existing, &cached); err == nil && cached.Assay != nil && cached.Assay.Revision > view.Assay.Revision {
+			return
+		}
+	}
 	c.entries[view.Assay.ID] = payload
-	c.mu.Unlock()
 }
 
 func (s *Service) rememberView(view *AssayView) *AssayView {
