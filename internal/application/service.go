@@ -12,18 +12,16 @@ import (
 type IDGenerator func(string) string
 
 type Service struct {
-	repository   Repository
-	now          func() time.Time
-	newID        IDGenerator
-	auditDetails map[string]any
+	repository Repository
+	now        func() time.Time
+	newID      IDGenerator
 }
 
 func NewService(repository Repository, newID IDGenerator) *Service {
 	return &Service{
-		repository:   repository,
-		now:          time.Now,
-		newID:        newID,
-		auditDetails: make(map[string]any),
+		repository: repository,
+		now:        time.Now,
+		newID:      newID,
 	}
 }
 
@@ -86,8 +84,7 @@ func (s *Service) ReviseDraft(ctx context.Context, id string, command ReviseDraf
 	if strings.TrimSpace(command.Actor) == "" {
 		return nil, fmt.Errorf("必须填写修订人员")
 	}
-	details := s.auditDetails
-	clear(details)
+	details := make(map[string]any)
 	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "assay.draft_revised", command.Actor, details,
 		func(a *domain.GerminationAssay) error {
 			if a.State != domain.StateDraft {
@@ -141,8 +138,7 @@ func (s *Service) RecordObservation(ctx context.Context, id string, command Obse
 		return nil, fmt.Errorf("必须填写记录人员")
 	}
 	observationID := s.newID("obs")
-	details := s.auditDetails
-	clear(details)
+	details := make(map[string]any)
 	details["day_no"] = command.DayNo
 	details["replicate_no"] = command.ReplicateNo
 	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "observation.recorded", command.RecordedBy,
@@ -179,8 +175,7 @@ func (s *Service) RecordDailyObservations(ctx context.Context, id string, comman
 	for index := range ids {
 		ids[index] = s.newID("obs")
 	}
-	details := s.auditDetails
-	clear(details)
+	details := make(map[string]any)
 	details["day_no"] = command.DayNo
 	details["replicate_count"] = len(command.Observations)
 	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "observation.day_recorded", command.RecordedBy,
