@@ -76,7 +76,7 @@ func (s *Service) ResolveDeviation(ctx context.Context, assayID, deviationID str
 			return nil
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("提交异常整改失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }

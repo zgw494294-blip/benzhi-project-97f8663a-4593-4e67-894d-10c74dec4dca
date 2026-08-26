@@ -41,7 +41,7 @@ func (s *Service) ReturnReview(ctx context.Context, id string, command ReviewCom
 			return a.ReturnForCorrection(record, s.now())
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("退回复核失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }
@@ -104,7 +104,7 @@ func (s *Service) ResubmitReview(ctx context.Context, id string, command Resubmi
 			return a.Resubmit(record, s.now())
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("重提复核失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }
@@ -137,7 +137,7 @@ func (s *Service) ApproveAndArchive(ctx context.Context, id string, command Revi
 			return a.Transition(domain.StateArchived, now)
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("批准归档失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }

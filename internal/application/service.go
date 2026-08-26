@@ -31,7 +31,7 @@ func (s *Service) CreateAssay(ctx context.Context, command CreateAssayCommand) (
 		return nil, err
 	}
 	if err := s.repository.Create(ctx, assay, command.OperatorName); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("创建检验批次失败: %v", err)
 	}
 	return s.repository.Get(ctx, assay.ID)
 }
@@ -124,7 +124,7 @@ func (s *Service) FreezeProtocol(ctx context.Context, id string, command Revisio
 			return a.Freeze(s.now())
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("冻结方案失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }
@@ -189,7 +189,7 @@ func (s *Service) RecordDailyObservations(ctx context.Context, id string, comman
 			return nil
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("登记整日观察失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }
@@ -211,7 +211,7 @@ func (s *Service) SealObservation(ctx context.Context, id string, command Revisi
 			return a.Seal(s.now())
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("封存观察失败: %v", err)
 	}
 	return BuildAssayView(assay), nil
 }
