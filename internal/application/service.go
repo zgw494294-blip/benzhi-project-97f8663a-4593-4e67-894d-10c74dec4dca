@@ -15,6 +15,7 @@ type Service struct {
 	repository Repository
 	now        func() time.Time
 	newID      IDGenerator
+	summaries  assaySummaryBuffer
 }
 
 func NewService(repository Repository, newID IDGenerator) *Service {
@@ -44,16 +45,12 @@ func (s *Service) GetAssay(ctx context.Context, id string) (*AssayView, error) {
 	return BuildAssayView(assay), nil
 }
 
-func (s *Service) ListAssays(ctx context.Context) ([]AssaySummary, error) {
+func (s *Service) ListAssays(ctx context.Context) ([]*AssaySummary, error) {
 	items, err := s.repository.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]AssaySummary, 0, len(items))
-	for i := range items {
-		result = append(result, BuildSummary(&items[i]))
-	}
-	return result, nil
+	return s.summaries.Project(items), nil
 }
 
 func (s *Service) DraftReadiness(ctx context.Context, id string) (domain.ReadinessResult, error) {
