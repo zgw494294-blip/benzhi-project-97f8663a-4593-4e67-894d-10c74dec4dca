@@ -18,8 +18,11 @@ func (s *Service) ResolveDeviation(ctx context.Context, assayID, deviationID str
 	if strings.TrimSpace(command.CorrectiveAction) == "" {
 		return nil, fmt.Errorf("必须填写补测动作")
 	}
+	details := s.auditDetails
+	clear(details)
+	details["deviation_id"] = deviationID
 	assay, err := s.repository.Update(ctx, assayID, command.ExpectedRevision, "deviation.corrected", command.Actor,
-		map[string]any{"deviation_id": deviationID}, func(a *domain.GerminationAssay) error {
+		details, func(a *domain.GerminationAssay) error {
 			if a.OperatorName != command.Actor {
 				return fmt.Errorf("仅责任检验员可提交整改")
 			}

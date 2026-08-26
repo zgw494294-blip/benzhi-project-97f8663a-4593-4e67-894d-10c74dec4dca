@@ -13,8 +13,12 @@ func (s *Service) ReturnReview(ctx context.Context, id string, command ReviewCom
 	if strings.TrimSpace(command.Reviewer) == "" {
 		return nil, fmt.Errorf("必须填写复核员")
 	}
+	details := s.auditDetails
+	clear(details)
+	details["correction_scope"] = command.CorrectionScope
+	details["checklist"] = command.Checklist
 	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "review.returned", command.Reviewer,
-		map[string]any{"correction_scope": command.CorrectionScope, "checklist": command.Checklist}, func(a *domain.GerminationAssay) error {
+		details, func(a *domain.GerminationAssay) error {
 			if a.ReviewerName != command.Reviewer {
 				return fmt.Errorf("仅指定复核员可退回")
 			}
@@ -84,7 +88,8 @@ func validateReturnedScope(a *domain.GerminationAssay, checklist []domain.Review
 }
 
 func (s *Service) ResubmitReview(ctx context.Context, id string, command ResubmitCommand) (*AssayView, error) {
-	details := map[string]any{}
+	details := s.auditDetails
+	clear(details)
 	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "review.resubmitted", command.Operator, details,
 		func(a *domain.GerminationAssay) error {
 			if a.OperatorName != command.Operator {
@@ -110,8 +115,12 @@ func (s *Service) ResubmitReview(ctx context.Context, id string, command Resubmi
 }
 
 func (s *Service) ApproveAndArchive(ctx context.Context, id string, command ReviewCommand) (*AssayView, error) {
+	details := s.auditDetails
+	clear(details)
+	details["checklist"] = command.Checklist
+	details["material_revision"] = command.ExpectedRevision
 	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "report.archived", command.Reviewer,
-		map[string]any{"checklist": command.Checklist, "material_revision": command.ExpectedRevision},
+		details,
 		func(a *domain.GerminationAssay) error {
 			if a.ReviewerName != command.Reviewer {
 				return fmt.Errorf("仅指定复核员可批准")
