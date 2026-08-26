@@ -110,31 +110,41 @@ func (s *Service) ResubmitReview(ctx context.Context, id string, command Resubmi
 }
 
 func (s *Service) ApproveAndArchive(ctx context.Context, id string, command ReviewCommand) (*AssayView, error) {
-	assay, err := s.repository.Update(ctx, id, command.ExpectedRevision, "report.archived", command.Reviewer,
+	approved, err := s.repository.Update(ctx, id, command.ExpectedRevision, "", command.Reviewer,
 		map[string]any{"checklist": command.Checklist, "material_revision": command.ExpectedRevision},
 		func(a *domain.GerminationAssay) error {
 			if a.ReviewerName != command.Reviewer {
 				return fmt.Errorf("仅指定复核员可批准")
 			}
-			now := s.now().UTC()
 			a.ReviewChecklist = append([]domain.ReviewChecklistItem{}, command.Checklist...)
 			a.ReviewMaterialRevision = a.Revision
 			record := domain.ReviewRecord{ID: s.newID("review"), Reviewer: command.Reviewer,
 				Opinion: strings.TrimSpace(command.Opinion), Decision: domain.DecisionApproved,
 				Checklist: append([]domain.ReviewChecklistItem{}, command.Checklist...), MaterialRevision: a.Revision}
-			if err := a.Approve(record, now); err != nil {
-				return err
-			}
+			return a.Approve(record, s.now().UTC())
+		})
+	if err != nil {
+		return nil, err
+	}
+	assay, err := s.repository.Update(ctx, id, approved.Revision, "report.archived", command.Reviewer,
+		map[string]any{"approved_revision": approved.Revision},
+		func(a *domain.GerminationAssay) error {
+			now := s.now().UTC()
+			archivedRevision := a.Revision
 			digest, err := domain.EvidenceDigest(a)
 			if err != nil {
 				return err
 			}
 			a.Report = &domain.ArchivedReport{
-				ID: s.newID("report"), AssayID: a.ID, AssayRevision: a.Revision + 1,
+				ID: s.newID("report"), AssayID: a.ID, AssayRevision: archivedRevision,
 				Decision: "approved", MetricSnapshot: domain.CalculateMetrics(a.Protocol, a.Observations),
 				EvidenceDigest: digest, ApprovedBy: command.Reviewer, ApprovedAt: now, ArchivedAt: now,
 			}
-			return a.Transition(domain.StateArchived, now)
+			if err := a.Transition(domain.StateArchived, now); err != nil {
+				return err
+			}
+			a.Revision--
+			return nil
 		})
 	if err != nil {
 		return nil, err

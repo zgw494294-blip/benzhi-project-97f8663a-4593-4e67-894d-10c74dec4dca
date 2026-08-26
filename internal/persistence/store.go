@@ -106,8 +106,10 @@ func (s *Store) Update(ctx context.Context, id string, expected int64, action, a
 	}
 	assay.Revision++
 	assay.UpdatedAt = time.Now().UTC()
-	event := domain.AuditEvent{ID: newID("evt"), AssayID: id, Revision: assay.Revision, Action: action, Actor: actor, Details: details, CreatedAt: assay.UpdatedAt}
-	assay.AuditTrail = append(assay.AuditTrail, event)
+	if action != "" {
+		event := domain.AuditEvent{ID: newID("evt"), AssayID: id, Revision: assay.Revision, Action: action, Actor: actor, Details: details, CreatedAt: assay.UpdatedAt}
+		assay.AuditTrail = append(assay.AuditTrail, event)
+	}
 	if err := saveAssay(ctx, tx, assay); err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed: assays.laboratory_batch_no") {
 			return nil, domain.ValidationErrors{Issues: []domain.ValidationError{{Field: "sample_accession", Message: "同一检验批次号下样本标识重复"}}}
