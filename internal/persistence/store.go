@@ -14,8 +14,9 @@ import (
 )
 
 type Store struct {
-	db *sql.DB
-	mu sync.Mutex
+	db     *sql.DB
+	mu     sync.Mutex
+	assays map[string]*domain.GerminationAssay
 }
 
 func Open(path string) (*Store, error) {
@@ -28,7 +29,7 @@ func Open(path string) (*Store, error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetConnMaxLifetime(0)
-	store := &Store{db: db}
+	store := &Store{db: db, assays: make(map[string]*domain.GerminationAssay)}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := store.initialize(ctx); err != nil {
@@ -91,9 +92,13 @@ func (s *Store) Update(ctx context.Context, id string, expected int64, action, a
 		return nil, err
 	}
 	defer tx.Rollback()
-	assay, err := loadAssay(ctx, tx, id)
-	if err != nil {
-		return nil, err
+	assay, cached := s.assays[id]
+	if !cached {
+		assay, err = loadAssay(ctx, tx, id)
+		if err != nil {
+			return nil, err
+		}
+		s.assays[id] = assay
 	}
 	if assay.Revision != expected {
 		return nil, domain.ConflictError{Expected: expected, Current: assay.Revision}
