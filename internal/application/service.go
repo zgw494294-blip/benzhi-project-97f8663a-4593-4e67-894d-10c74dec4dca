@@ -15,6 +15,7 @@ type Service struct {
 	repository Repository
 	now        func() time.Time
 	newID      IDGenerator
+	reads      assayReadGroup
 }
 
 func NewService(repository Repository, newID IDGenerator) *Service {
@@ -37,7 +38,7 @@ func (s *Service) CreateAssay(ctx context.Context, command CreateAssayCommand) (
 }
 
 func (s *Service) GetAssay(ctx context.Context, id string) (*AssayView, error) {
-	assay, err := s.repository.Get(ctx, id)
+	assay, err := s.reads.Do(ctx, id, s.repository.Get)
 	if err != nil {
 		return nil, err
 	}
