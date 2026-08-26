@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"sort"
 	"time"
 )
 
@@ -31,12 +32,25 @@ type reportEvidence struct {
 }
 
 func CanonicalEvidence(a *GerminationAssay) ([]byte, error) {
+	normalizeObservationOrder(a.Observations)
 	evidence := reportEvidence{
 		AssayID: a.ID, SampleAccession: a.SampleAccession, BatchNo: a.LaboratoryBatchNo,
 		ProtocolVersion: a.ProtocolVersion, Protocol: a.Protocol, Observations: a.Observations,
 		Metrics: CalculateMetrics(a.Protocol, a.Observations), ReviewHistory: a.Reviews,
 	}
 	return json.Marshal(evidence)
+}
+
+func normalizeObservationOrder(observations []DailyObservation) {
+	sort.SliceStable(observations, func(left, right int) bool {
+		if observations[left].DayNo != observations[right].DayNo {
+			return observations[left].DayNo < observations[right].DayNo
+		}
+		if observations[left].ReplicateNo != observations[right].ReplicateNo {
+			return observations[left].ReplicateNo < observations[right].ReplicateNo
+		}
+		return observations[left].RecordedAt.After(observations[right].RecordedAt)
+	})
 }
 
 func EvidenceDigest(a *GerminationAssay) (string, error) {
