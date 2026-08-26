@@ -1,6 +1,6 @@
 # BENZHI_README
 
-基于 Go 实现的seed-vigor-workbench Web 项目，一款后端服务，用于支持seed-vigor-workbench的核心业务流程。
+基于 Go 实现的种子发芽势检验 Web 项目，一款后端服务，用于管理种子发芽势试验、逐日观察、异常整改和技术复核。
 
 ## 项目说明
 - 项目：benzhi-project-97f8663a-4593-4e67-894d-10c74dec4dca
