@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>种子发芽势检验工作台</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">GERMPLASM QUALITY</span><h1>种子发芽势检验工作台</h1></div>
+    <button id="new-assay" class="primary">新建检验批次</button>
+  </header>
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="side-title"><h2>检验批次</h2><button id="refresh-list" class="text">刷新</button></div>
+      <div id="assay-list" class="assay-list"></div>
+    </aside>
+    <section class="workspace">
+      <div id="notice" role="status" class="notice hidden"></div>
+      <section id="welcome" class="empty-state">
+        <div class="seed-mark">●</div><h2>从一个检验批次开始</h2>
+        <p>建档、冻结方案、逐日观察、异常整改、技术复核和报告归档都在这里完成。</p>
+      </section>
+      <section id="detail" class="hidden">
+        <div class="summary-card">
+          <div><span id="state-chip" class="chip"></span><h2 id="assay-title"></h2><p id="assay-subtitle"></p></div>
+          <div class="revision">Revision <strong id="revision"></strong></div>
+        </div>
+        <nav class="tabs" aria-label="批次工作区">
+          <button data-tab="overview" class="active">概览与方案</button>
+          <button data-tab="observation">观察录入</button>
+          <button data-tab="deviation">异常整改</button>
+          <button data-tab="review">复核归档</button>
+          <button data-tab="timeline">时间线</button>
+        </nav>
+        <div id="tab-overview" class="tab-panel"></div>
+        <div id="tab-observation" class="tab-panel hidden"></div>
+        <div id="tab-deviation" class="tab-panel hidden"></div>
+        <div id="tab-review" class="tab-panel hidden"></div>
+        <div id="tab-timeline" class="tab-panel hidden"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="create-dialog">
+    <form id="create-form" method="dialog">
+      <div class="dialog-head"><div><span class="eyebrow">NEW ASSAY</span><h2>新建检验批次</h2></div><button type="button" class="icon" data-close>×</button></div>
+      <div class="form-grid">
+        <label>样本标识<input name="sample_accession" required placeholder="例如 ZM-2026-001"></label>
+        <label>检验批次号<input name="laboratory_batch_no" required placeholder="例如 LAB-2026-08"></label>
+        <label>责任检验员<input name="operator_name" required></label>
+        <label>质量复核员<input name="reviewer_name" required></label>
+        <label>培养温度（°C）<input name="temperature_celsius" type="number" value="25" min="5" max="45" step="0.1" required></label>
+        <label>培养基质<input name="substrate" value="湿润滤纸" required></label>
+        <label>每日光照（小时）<input name="light_cycle_hours" type="number" value="12" min="0" max="24" required></label>
+        <label>观察天数<input name="observation_days" type="number" value="3" min="1" max="60" required></label>
+        <label>重复组数<input name="replicate_count" type="number" value="4" min="2" max="20" required></label>
+        <label>每组粒数<input name="seeds_per_replicate" type="number" value="50" min="1" required></label>
+        <label>组间离散度阈值<input name="dispersion_limit" type="number" value="0.1" min="0" max="1" step="0.01" required></label>
+        <label class="wide">正常幼苗判定规则<textarea name="normal_seedling_rule" required>主根与胚轴发育完整，无影响继续生长的损伤。</textarea></label>
+      </div>
+      <div class="dialog-actions"><button type="button" data-close>取消</button><button class="primary" type="submit">保存草稿</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="action-dialog">
+    <form id="action-form" method="dialog">
+      <div class="dialog-head"><h2 id="action-title">提交操作</h2><button type="button" class="icon" data-close>×</button></div>
+      <div id="action-fields"></div>
+      <div class="dialog-actions"><button type="button" data-close>取消</button><button class="primary" type="submit">确认提交</button></div>
+    </form>
+  </dialog>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
