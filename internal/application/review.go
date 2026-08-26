@@ -43,7 +43,7 @@ func (s *Service) ReturnReview(ctx context.Context, id string, command ReviewCom
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func validateReturnedScope(a *domain.GerminationAssay, checklist []domain.ReviewChecklistItem, scope []domain.CorrectionTarget) error {
@@ -106,7 +106,7 @@ func (s *Service) ResubmitReview(ctx context.Context, id string, command Resubmi
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) ApproveAndArchive(ctx context.Context, id string, command ReviewCommand) (*AssayView, error) {
@@ -139,7 +139,7 @@ func (s *Service) ApproveAndArchive(ctx context.Context, id string, command Revi
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func currentObservationIDs(a *domain.GerminationAssay) []string {

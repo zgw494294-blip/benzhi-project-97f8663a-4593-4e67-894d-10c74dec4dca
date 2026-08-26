@@ -78,5 +78,5 @@ func (s *Service) ResolveDeviation(ctx context.Context, assayID, deviationID str
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }

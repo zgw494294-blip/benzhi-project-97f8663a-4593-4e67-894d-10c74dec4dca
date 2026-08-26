@@ -15,10 +15,11 @@ type Service struct {
 	repository Repository
 	now        func() time.Time
 	newID      IDGenerator
+	views      assayViewCache
 }
 
 func NewService(repository Repository, newID IDGenerator) *Service {
-	return &Service{repository: repository, now: time.Now, newID: newID}
+	return &Service{repository: repository, now: time.Now, newID: newID, views: newAssayViewCache()}
 }
 
 func (s *Service) CreateAssay(ctx context.Context, command CreateAssayCommand) (*domain.GerminationAssay, error) {
@@ -37,11 +38,14 @@ func (s *Service) CreateAssay(ctx context.Context, command CreateAssayCommand) (
 }
 
 func (s *Service) GetAssay(ctx context.Context, id string) (*AssayView, error) {
+	if cached, ok := s.views.Get(id); ok {
+		return cached, nil
+	}
 	assay, err := s.repository.Get(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) ListAssays(ctx context.Context) ([]AssaySummary, error) {
@@ -109,7 +113,7 @@ func (s *Service) ReviseDraft(ctx context.Context, id string, command ReviseDraf
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) FreezeProtocol(ctx context.Context, id string, command RevisionCommand) (*AssayView, error) {
@@ -126,7 +130,7 @@ func (s *Service) FreezeProtocol(ctx context.Context, id string, command Revisio
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) RecordObservation(ctx context.Context, id string, command ObservationCommand) (*AssayView, error) {
@@ -157,7 +161,7 @@ func (s *Service) RecordObservation(ctx context.Context, id string, command Obse
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) RecordDailyObservations(ctx context.Context, id string, command DailyObservationCommand) (*AssayView, error) {
@@ -191,7 +195,7 @@ func (s *Service) RecordDailyObservations(ctx context.Context, id string, comman
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) SealObservation(ctx context.Context, id string, command RevisionCommand) (*AssayView, error) {
@@ -213,7 +217,7 @@ func (s *Service) SealObservation(ctx context.Context, id string, command Revisi
 	if err != nil {
 		return nil, err
 	}
-	return BuildAssayView(assay), nil
+	return s.rememberView(BuildAssayView(assay)), nil
 }
 
 func (s *Service) refreshDeviations(a *domain.GerminationAssay, requireComplete bool) {
